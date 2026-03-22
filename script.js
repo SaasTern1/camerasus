@@ -4,19 +4,20 @@ const canvasCtx = canvasElement.getContext('2d');
 const loadingMessage = document.getElementById('loading');
 
 // -----------------------------------------
-// VARIABLES DE LA INTERFAZ Y DIBUJO
+// UI DINÁMICA: CONFIGURACIÓN DE BOTONES
 // -----------------------------------------
 let botones = [
-    { id: "Movimiento (Estela)", x: 30, y: 30, w: 250, h: 70, baseColor: "rgba(200, 100, 0, 0.7)", activeColor: "rgba(0, 200, 0, 0.7)", activo: false },
-    { id: "Formas (Pellizcar)", x: 30, y: 120, w: 250, h: 70, baseColor: "rgba(200, 100, 0, 0.7)", activeColor: "rgba(0, 200, 0, 0.7)", activo: false }
+    { id: "Estela de Luz", x: 30, y: 30, w: 220, h: 65, baseColor: "rgba(30, 136, 229, 0.6)", activeColor: "rgba(0, 200, 83, 0.8)", hoverColor: "rgba(100, 181, 246, 0.8)", activo: false, tipo: "toggle" },
+    { id: "Crear Formas", x: 30, y: 115, w: 220, h: 65, baseColor: "rgba(142, 36, 170, 0.6)", activeColor: "rgba(0, 200, 83, 0.8)", hoverColor: "rgba(186, 104, 200, 0.8)", activo: false, tipo: "toggle" },
+    { id: "Borrar Todo", x: 30, y: 200, w: 220, h: 65, baseColor: "rgba(229, 57, 53, 0.6)", activeColor: "rgba(255, 82, 82, 0.9)", hoverColor: "rgba(239, 154, 154, 0.8)", activo: false, tipo: "action" }
 ];
 
 let lastClickTime = 0; 
-let estelaMovimiento = []; // Guarda los puntos por donde pasa el dedo
-let formasGeneradas = [];  // Guarda las figuras que vas creando
+let estelaMovimiento = []; 
+let formasGeneradas = [];  
 
 // -----------------------------------------
-// FUNCIÓN PRINCIPAL DE PROCESAMIENTO
+// MOTOR DE RENDERIZADO E INTERACCIÓN
 // -----------------------------------------
 function onResults(results) {
     loadingMessage.style.display = 'none';
@@ -24,120 +25,131 @@ function onResults(results) {
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-    // 1. Dibujar el video en modo espejo
+    // 1. Efecto Espejo para el video base
     canvasCtx.scale(-1, 1);
     canvasCtx.drawImage(results.image, -canvasElement.width, 0, canvasElement.width, canvasElement.height);
     canvasCtx.restore();
 
     let interactuando = false;
-    let dedoX = 0, dedoY = 0;
-    let pulgarX = 0, pulgarY = 0;
+    let dedoX = 0, dedoY = 0, pulgarX = 0, pulgarY = 0;
 
-    // 2. Rastrear la mano y detectar "Pellizco"
+    // 2. Rastreo Esquelético
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        const landmarks = results.multiHandLandmarks[0]; // Usar la primera mano detectada
+        const landmarks = results.multiHandLandmarks[0];
         
-        // Coordenadas del Dedo Índice (Punto 8)
         dedoX = (1 - landmarks[8].x) * canvasElement.width;
         dedoY = landmarks[8].y * canvasElement.height;
-        
-        // Coordenadas del Pulgar (Punto 4)
         pulgarX = (1 - landmarks[4].x) * canvasElement.width;
         pulgarY = landmarks[4].y * canvasElement.height;
         
         interactuando = true;
 
-        // Calcular distancia entre índice y pulgar para el gesto de "clic/agarrar"
         const distanciaPellizco = Math.hypot(dedoX - pulgarX, dedoY - pulgarY);
-        const haciendoPellizco = distanciaPellizco < 40; // Si están a menos de 40px, es un pellizco
+        const haciendoPellizco = distanciaPellizco < 40; 
 
-        // Dibujar el cursor en el dedo índice
+        // 3. Dibujar el cursor dinámico en el dedo
         canvasCtx.beginPath();
-        canvasCtx.arc(dedoX, dedoY, haciendoPellizco ? 20 : 12, 0, 2 * Math.PI);
-        canvasCtx.fillStyle = haciendoPellizco ? "#00FFFF" : "#FF00FF";
+        canvasCtx.arc(dedoX, dedoY, haciendoPellizco ? 18 : 10, 0, 2 * Math.PI);
+        canvasCtx.fillStyle = haciendoPellizco ? "#00E5FF" : "#E040FB";
+        canvasCtx.shadowBlur = 15;
+        canvasCtx.shadowColor = canvasCtx.fillStyle;
         canvasCtx.fill();
+        canvasCtx.shadowBlur = 0; // Resetear sombra para el resto
 
-        // -----------------------------------------
-        // LÓGICA DE LOS MÓDULOS
-        // -----------------------------------------
-        
-        // MÓDULO 1: Movimiento (Dejar una estela brillante)
+        // Lógica: Estela
         if (botones[0].activo) {
             estelaMovimiento.push({x: dedoX, y: dedoY, vida: 1.0});
         }
 
-        // MÓDULO 2: Formas (Generar cuadrados al pellizcar)
+        // Lógica: Generar Formas con Pellizco
         if (botones[1].activo && haciendoPellizco) {
-            // Solo añadir una forma cada cierto tiempo para no saturar
             const currentTime = new Date().getTime();
-            if (currentTime - lastClickTime > 200) {
-                // Generar color y tamaño aleatorio
-                const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-                const size = Math.random() * 50 + 20;
+            if (currentTime - lastClickTime > 150) { // Velocidad de creación
+                const colores = ["#FF1744", "#00E676", "#2979FF", "#FFEA00", "#D500F9"];
+                const color = colores[Math.floor(Math.random() * colores.length)];
+                const size = Math.random() * 40 + 20;
                 formasGeneradas.push({x: dedoX, y: dedoY, size: size, color: color});
                 lastClickTime = currentTime;
             }
         }
     }
 
-    // 3. Dibujar las estelas de movimiento
+    // 4. Renderizar Estelas
     for (let i = estelaMovimiento.length - 1; i >= 0; i--) {
         let p = estelaMovimiento[i];
         canvasCtx.beginPath();
-        canvasCtx.arc(p.x, p.y, 8 * p.vida, 0, 2 * Math.PI);
-        canvasCtx.fillStyle = `rgba(255, 255, 0, ${p.vida})`;
+        canvasCtx.arc(p.x, p.y, 10 * p.vida, 0, 2 * Math.PI);
+        canvasCtx.fillStyle = `rgba(0, 229, 255, ${p.vida})`;
         canvasCtx.fill();
         
-        p.vida -= 0.05; // La estela se desvanece
+        p.vida -= 0.03; 
         if (p.vida <= 0) estelaMovimiento.splice(i, 1);
     }
 
-    // 4. Dibujar las formas generadas
+    // 5. Renderizar Formas
     formasGeneradas.forEach(forma => {
         canvasCtx.fillStyle = forma.color;
-        // Dibujar un cuadrado centrado
+        canvasCtx.shadowBlur = 10;
+        canvasCtx.shadowColor = forma.color;
         canvasCtx.fillRect(forma.x - forma.size/2, forma.y - forma.size/2, forma.size, forma.size);
-        canvasCtx.strokeStyle = "white";
+        
+        canvasCtx.strokeStyle = "#FFFFFF";
         canvasCtx.lineWidth = 2;
         canvasCtx.strokeRect(forma.x - forma.size/2, forma.y - forma.size/2, forma.size, forma.size);
+        canvasCtx.shadowBlur = 0; 
     });
 
-    // 5. Dibujar la Interfaz de Botones y detectar toques
+    // 6. Motor de la Interfaz (UI)
     const currentTimeUI = new Date().getTime();
+    
     botones.forEach(btn => {
-        // ¿El dedo toca el botón?
-        if (interactuando && dedoX > btn.x && dedoX < btn.x + btn.w && dedoY > btn.y && dedoY < btn.y + btn.h) {
-            canvasCtx.fillStyle = "rgba(0, 255, 255, 0.5)";
-            canvasCtx.fillRect(btn.x, btn.y, btn.w, btn.h);
+        let hover = interactuando && dedoX > btn.x && dedoX < btn.x + btn.w && dedoY > btn.y && dedoY < btn.y + btn.h;
 
-            // Activar/Desactivar con cooldown
-            if (currentTimeUI - lastClickTime > 1000) {
-                btn.activo = !btn.activo;
+        // Determinar el color del botón
+        if (hover) {
+            canvasCtx.fillStyle = btn.hoverColor;
+            
+            // Lógica de "Clic"
+            if (currentTimeUI - lastClickTime > 600) { // Cooldown para no hacer múltiples clics
+                if (btn.tipo === "toggle") {
+                    btn.activo = !btn.activo;
+                } else if (btn.tipo === "action" && btn.id === "Borrar Todo") {
+                    formasGeneradas = [];
+                    estelaMovimiento = [];
+                    // El botón parpadea en rojo brillante al usarlo
+                    canvasCtx.fillStyle = btn.activeColor; 
+                }
                 lastClickTime = currentTimeUI;
             }
         } else {
             canvasCtx.fillStyle = btn.activo ? btn.activeColor : btn.baseColor;
-            canvasCtx.fillRect(btn.x, btn.y, btn.w, btn.h);
         }
 
-        canvasCtx.strokeStyle = "white";
-        canvasCtx.lineWidth = 2;
+        // Dibujar Botón
+        canvasCtx.fillRect(btn.x, btn.y, btn.w, btn.h);
+
+        // Borde dinámico (más grueso si está activo o en hover)
+        canvasCtx.strokeStyle = (hover || btn.activo) ? "#FFFFFF" : "rgba(255, 255, 255, 0.5)";
+        canvasCtx.lineWidth = (hover || btn.activo) ? 3 : 1;
         canvasCtx.strokeRect(btn.x, btn.y, btn.w, btn.h);
-        canvasCtx.fillStyle = "white";
-        canvasCtx.font = "bold 18px Arial";
-        canvasCtx.fillText(btn.id, btn.x + 15, btn.y + 40);
+
+        // Texto del Botón
+        canvasCtx.fillStyle = "#FFFFFF";
+        canvasCtx.font = "bold 18px 'Segoe UI', sans-serif";
+        // Centrar texto verticalmente
+        canvasCtx.fillText(btn.id, btn.x + 20, btn.y + 38);
     });
 }
 
 // -----------------------------------------
-// INICIALIZACIÓN DE MEDIAPIPE Y CÁMARA
+// INICIALIZACIÓN
 // -----------------------------------------
 const hands = new Hands({locateFile: (file) => {
     return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
 }});
 
 hands.setOptions({
-    maxNumHands: 1, // Reducido a 1 mano para mayor rendimiento y facilidad de uso
+    maxNumHands: 1, 
     modelComplexity: 1,
     minDetectionConfidence: 0.7,
     minTrackingConfidence: 0.7
