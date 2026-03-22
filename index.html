@@ -3,22 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Interactivo de Visión</title>
+    <title>Visión Artificial Avanzada</title>
     <link rel="stylesheet" href="style.css">
     
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="video-container">
         <video class="input_video" style="display: none;" autoplay playsinline></video>
-        
-        <canvas class="output_canvas" width="1280" height="720"></canvas>
-        
-        <div id="loading">Cargando modelos de IA y cámara...</div>
+        <canvas class="output_canvas"></canvas>
     </div>
+
+    <div class="ui-panel">
+        <div class="panel-header">
+            <div class="status-dot"></div>
+            <h2>Módulos de Sistema</h2>
+        </div>
+        <div class="button-group">
+            <button id="btn-movimiento" class="glass-btn">
+                <span class="icon">✨</span> Estela de Movimiento
+            </button>
+            <button id="btn-formas" class="glass-btn">
+                <span class="icon">📐</span> Generador de Formas
+            </button>
+            <button id="btn-borrar" class="glass-btn danger">
+                <span class="icon">🗑️</span> Limpiar Entorno
+            </button>
+        </div>
+    </div>
+
+    <div id="virtual-cursor">
+        <div class="cursor-ring"></div>
+    </div>
+
+    <div id="loading">Cargando modelos neuronales...</div>
 
     <script src="script.js"></script>
 </body>
